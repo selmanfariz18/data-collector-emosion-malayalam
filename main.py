@@ -1,67 +1,70 @@
-import tkinter as tk
-from tkinter import messagebox
+from PyQt5 import QtWidgets
+import sys
 import pandas as pd
 import os
-from openpyxl import load_workbook
 
-# Function to handle submission of text and emotion
-def submit_data():
-    text = text_entry.get("1.0", "end-1c").strip()
-    emotion = emotion_var.get()
+class EmotionCollector(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
 
-    if text == "":
-        messagebox.showerror("Input Error", "Please enter some text.")
-        return
+        # Text Entry
+        self.text_label = QtWidgets.QLabel("Enter Malayalam Text:")
+        self.text_entry = QtWidgets.QTextEdit()
 
-    if emotion == "":
-        messagebox.showerror("Input Error", "Please select an emotion.")
-        return
+        # Emotion Dropdown
+        self.emotion_label = QtWidgets.QLabel("Select Emotion:")
+        self.emotion_combo = QtWidgets.QComboBox()
+        self.emotion_combo.addItems(["Happy", "Excitement", "Sad", "Sarcasm", "Humour", "Anger", "Love", "Surprise", "Abusive", "Fear"])
 
-    # Prepare data
-    data = {"Text": text, "Emotion": emotion}
+        # Submit Button
+        self.submit_button = QtWidgets.QPushButton("Submit")
+        self.submit_button.clicked.connect(self.submit_data)
 
-    try:
-        if os.path.exists("emotion_dataset.xlsx"):
-            # Load the existing workbook
-            book = load_workbook("emotion_dataset.xlsx")
-            sheet = book.active
-            # Append the new row at the end
-            sheet.append([text, emotion])
-            book.save("emotion_dataset.xlsx")
-            book.close()
-        else:
-            # If file does not exist, create it with headers
-            df = pd.DataFrame([data])
+        # Layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.text_label)
+        layout.addWidget(self.text_entry)
+        layout.addWidget(self.emotion_label)
+        layout.addWidget(self.emotion_combo)
+        layout.addWidget(self.submit_button)
+
+        self.setLayout(layout)
+        self.setWindowTitle("Malayalam Text Emotion Dataset Collector")
+
+    def submit_data(self):
+        text = self.text_entry.toPlainText().strip()
+        emotion = self.emotion_combo.currentText()
+
+        if text == "":
+            QtWidgets.QMessageBox.critical(self, "Input Error", "Please enter some text.")
+            return
+
+        if emotion == "":
+            QtWidgets.QMessageBox.critical(self, "Input Error", "Please select an emotion.")
+            return
+
+        # Prepare data
+        data = pd.DataFrame({"Text": [text], "Emotion": [emotion]})
+
+        try:
+            if os.path.exists("emotion_dataset.xlsx"):
+                df = pd.read_excel("emotion_dataset.xlsx")
+                df = pd.concat([df, data], ignore_index=True)
+            else:
+                df = data
+
             df.to_excel("emotion_dataset.xlsx", index=False)
 
-        # Clear input fields
-        text_entry.delete("1.0", "end")
-        emotion_var.set("")
+            # Clear input fields
+            self.text_entry.clear()
+            self.emotion_combo.setCurrentIndex(0)
 
-        messagebox.showinfo("Success", "Data submitted successfully!")
+            QtWidgets.QMessageBox.information(self, "Success", "Data submitted successfully!")
 
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", f"An error occurred: {e}")
 
-# Create the main window
-root = tk.Tk()
-root.title("Malayalam Text Emotion Dataset Collector")
-
-# Text Entry
-tk.Label(root, text="Enter Malayalam Text:").pack(pady=5)
-text_entry = tk.Text(root, height=5, width=50)
-text_entry.pack(pady=5)
-
-# Emotion Dropdown
-tk.Label(root, text="Select Emotion:").pack(pady=5)
-emotion_var = tk.StringVar(root)
-emotions = ["Happy", "Excitement", "Sad", "Sarcasm", "Humour", "Anger", "Love", "Surprise", "Abusive", "Fear"]
-emotion_menu = tk.OptionMenu(root, emotion_var, *emotions)
-emotion_menu.pack(pady=5)
-
-# Submit Button
-submit_button = tk.Button(root, text="Submit", command=submit_data)
-submit_button.pack(pady=20)
-
-# Run the application
-root.mainloop()
+app = QtWidgets.QApplication(sys.argv)
+window = EmotionCollector()
+window.show()
+sys.exit(app.exec_())
