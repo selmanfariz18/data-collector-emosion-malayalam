@@ -13,7 +13,7 @@ def submit_data():
         messagebox.showerror("Input Error", "Please enter some text.")
         return
 
-    if emotion == "":
+    if emotion == "Select Emotion":  # Check if an emotion has been selected
         messagebox.showerror("Input Error", "Please select an emotion.")
         return
 
@@ -36,7 +36,7 @@ def submit_data():
 
         # Clear input fields
         text_entry.delete("1.0", "end")
-        emotion_var.set("")
+        emotion_var.set("Select Emotion")  # Reset to default after submission
 
         messagebox.showinfo("Success", "Data submitted successfully!")
 
