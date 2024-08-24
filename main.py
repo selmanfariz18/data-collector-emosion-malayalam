@@ -1,70 +1,135 @@
-from PyQt5 import QtWidgets
-import sys
+import tkinter as tk
+from tkinter import messagebox
 import pandas as pd
 import os
+from openpyxl import load_workbook
 
-class EmotionCollector(QtWidgets.QWidget):
-    def __init__(self):
-        super().__init__()
+# Function to handle submission of text and emotion
+def submit_data():
+    text = text_entry.get("1.0", "end-1c").strip()
+    emotion = emotion_var.get()
+    
+    if text == "":
+        messagebox.showerror("Input Error", "Please enter some text.")
+        return
 
-        # Text Entry
-        self.text_label = QtWidgets.QLabel("Enter Malayalam Text:")
-        self.text_entry = QtWidgets.QTextEdit()
+    if emotion == "":
+        messagebox.showerror("Input Error", "Please select an emotion.")
+        return
 
-        # Emotion Dropdown
-        self.emotion_label = QtWidgets.QLabel("Select Emotion:")
-        self.emotion_combo = QtWidgets.QComboBox()
-        self.emotion_combo.addItems(["Happy", "Excitement", "Sad", "Sarcasm", "Humour", "Anger", "Love", "Surprise", "Abusive", "Fear"])
+    # Prepare data
+    data = {"Text": text, "Emotion": emotion}
 
-        # Submit Button
-        self.submit_button = QtWidgets.QPushButton("Submit")
-        self.submit_button.clicked.connect(self.submit_data)
-
-        # Layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(self.text_label)
-        layout.addWidget(self.text_entry)
-        layout.addWidget(self.emotion_label)
-        layout.addWidget(self.emotion_combo)
-        layout.addWidget(self.submit_button)
-
-        self.setLayout(layout)
-        self.setWindowTitle("Malayalam Text Emotion Dataset Collector")
-
-    def submit_data(self):
-        text = self.text_entry.toPlainText().strip()
-        emotion = self.emotion_combo.currentText()
-
-        if text == "":
-            QtWidgets.QMessageBox.critical(self, "Input Error", "Please enter some text.")
-            return
-
-        if emotion == "":
-            QtWidgets.QMessageBox.critical(self, "Input Error", "Please select an emotion.")
-            return
-
-        # Prepare data
-        data = pd.DataFrame({"Text": [text], "Emotion": [emotion]})
-
-        try:
-            if os.path.exists("emotion_dataset.xlsx"):
-                df = pd.read_excel("emotion_dataset.xlsx")
-                df = pd.concat([df, data], ignore_index=True)
-            else:
-                df = data
-
+    try:
+        if os.path.exists("emotion_dataset.xlsx"):
+            # Load the existing workbook
+            book = load_workbook("emotion_dataset.xlsx")
+            sheet = book.active
+            # Append the new row at the end
+            sheet.append([text, emotion])
+            book.save("emotion_dataset.xlsx")
+            book.close()
+        else:
+            # If file does not exist, create it with headers
+            df = pd.DataFrame([data])
             df.to_excel("emotion_dataset.xlsx", index=False)
 
-            # Clear input fields
-            self.text_entry.clear()
-            self.emotion_combo.setCurrentIndex(0)
+        # Clear input fields
+        text_entry.delete("1.0", "end")
+        emotion_var.set("")
 
-            QtWidgets.QMessageBox.information(self, "Success", "Data submitted successfully!")
+        messagebox.showinfo("Success", "Data submitted successfully!")
 
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "Error", f"An error occurred: {e}")
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
 
-app = QtWidgets.QApplication(sys.argv)
-window = EmotionCollector()
-window.show()
-sys.exit(app.exec_())
+# Function to handle emoji selection
+def select_emotion(emotion):
+    emotion_var.set(emotion)
+    # Insert the emoji into the text entry area
+    text_entry.insert("end", f" {emotion_dict[emotion]}")
+
+# Create the main window
+root = tk.Tk()
+root.title("Malayalam Text Emotion Dataset Collector")
+root.geometry("800x600")  # Adjusted size for better layout
+
+# Styling the main window
+root.configure(bg="#f0f0f0")  # Light gray background
+
+# Text Entry
+tk.Label(root, text="Enter Malayalam Text:", font=("Helvetica", 14, "bold"), bg="#f0f0f0").pack(pady=10)
+text_entry = tk.Text(root, height=6, width=60, font=("Helvetica", 12))
+text_entry.pack(pady=10)
+
+# Updated Emoji Dictionary with More Colorful and Attractive Emojis
+emotion_dict = {
+    "Happy": "😃",
+    "Excitement": "🤩",
+    "Sad": "😢",
+    "Sarcasm": "😏",
+    "Humour": "😂",
+    "Anger": "😡",
+    "Love": "😍",
+    "Surprise": "😲",
+    "Abusive": "🤬",
+    "Fear": "😨"
+}
+
+# Emotion Dropdown Menu
+emotion_var = tk.StringVar(root)
+emotion_var.set("Select Emotion")
+
+emotion_label = tk.Label(root, text="Select Emotion:", font=("Helvetica", 14, "bold"), bg="#f0f0f0")
+emotion_label.pack(pady=5)
+
+# Create a list of emotion options for the dropdown
+emotion_options = list(emotion_dict.keys())
+emotion_menu = tk.OptionMenu(root, emotion_var, *emotion_options)
+emotion_menu.config(font=("Helvetica", 12))
+emotion_menu.pack(pady=10)
+
+# Display Emoji Buttons in a Grid Layout
+emoji_frame = tk.Frame(root, bg="#f0f0f0")
+emoji_frame.pack(pady=20)
+
+# Adjust number of columns in the grid (e.g., 4)
+columns = 4
+row = 0
+col = 0
+
+for emotion in emotion_dict:
+    emoji_button = tk.Button(
+        emoji_frame,
+        text=emotion_dict[emotion],
+        font=("Helvetica", 14),
+        bg="#ffffff",
+        fg="#333333",
+        relief="raised",
+        padx=10,
+        pady=5,
+        command=lambda e=emotion: text_entry.insert("end", f" {emotion_dict[e]}")
+    )
+    emoji_button.grid(row=row, column=col, padx=10, pady=5)
+    
+    col += 1
+    if col >= columns:
+        col = 0
+        row += 1
+
+# Submit Button with Enhanced Styling
+submit_button = tk.Button(
+    root,
+    text="Submit",
+    command=submit_data,
+    font=("Helvetica", 16, "bold"),
+    bg="#4CAF50",
+    fg="#ffffff",
+    padx=20,
+    pady=10,
+    relief="raised"
+)
+submit_button.pack(pady=20)
+
+# Run the application
+root.mainloop()
